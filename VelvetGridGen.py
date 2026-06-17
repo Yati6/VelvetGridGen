@@ -12,6 +12,7 @@ ui = app.userInterface
 handlers = []
 
 maxCount = 100
+defultRectSize = adsk.core.ValueInput.createByReal(5) #5 cm 
 
 
 def run(_context: str):
@@ -74,18 +75,18 @@ class MakeGridCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         inputs.addDistanceValueCommandInput(
             "rowheight",
             "Row Height",
-            adsk.core.ValueInput.createByReal(1),
+            defultRectSize,
         )
         inputs.addDistanceValueCommandInput(
             "columnWidth",
             "Column Width",
-            adsk.core.ValueInput.createByReal(1),
+            defultRectSize,
         )
 
         inputs.addDistanceValueCommandInput(
             "innerOffset",
             "Inner Spacing",
-            adsk.core.ValueInput.createByReal(0.25),
+            adsk.core.ValueInput.createByReal(0.5),
         )
         inputs.addDistanceValueCommandInput(
             "outerOffset",
@@ -93,7 +94,7 @@ class MakeGridCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
             adsk.core.ValueInput.createByReal(1),
         )
 
-        #
+        #the table and it's title should be visble only if this is on, the custom sizes are optional 
         customSizes = inputs.addBoolValueInput(
             "customSizes", "customSizes", True, "", False
         )
@@ -102,67 +103,78 @@ class MakeGridCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         columnsTable = inputs.addTableCommandInput("columnsTable", "Columns", 2, "1:1")
 
         add_button_rows = inputs.addBoolValueInput("rowsTable_AddButton", "➕", False)
-        add_button_columns = inputs.addBoolValueInput(
-            "columnsTable_AddButton", "➕", False
-        )
+        add_button_columns = inputs.addBoolValueInput("columnsTable_AddButton", "➕", False)
 
+        add_button_rows.isVisible = False
+        add_button_columns.isVisible = False
+        
         rowsTable.addToolbarCommandInput(add_button_rows)
         columnsTable.addToolbarCommandInput(add_button_columns)
+
+        title_index_rows = inputs.addTextBoxCommandInput('rowIndex_col_subTitle', 'row Index', 'Row', 1, True)
+        title_size_rows = inputs.addTextBoxCommandInput('rowSize_col_subTitle', 'rows size', 'size', 1, True)
+        title_index_columns = inputs.addTextBoxCommandInput('columnIndex_col_subTitle', 'column Index', 'Column', 1, True)
+        title_size_columns = inputs.addTextBoxCommandInput('columnSize_col_subTitle', 'column size', 'size', 1, True)
+
+        rowsTable.addCommandInput(title_index_rows, 0, 0,)
+        rowsTable.addCommandInput(title_size_rows, 0, 1)
+        columnsTable.addCommandInput(title_index_columns, 0, 0)
+        columnsTable.addCommandInput(title_size_columns, 0, 1)
 
         row_number = inputs.addIntegerSpinnerCommandInput(
             "row_number_0", "Row Number", 1, maxCount, 1, 1
         )
+        #somtimes table doesnt update the contents to be not visble from the start so i do mannualy
+        row_number.isVisible = False
         column_number = inputs.addIntegerSpinnerCommandInput(
             "column_number_0", "Column Number", 1, maxCount, 1, 1
         )
+        column_number.isVisible = False
         row_height = inputs.addDistanceValueCommandInput(
             "row_height_0",
             "Row 1 Height",
-            adsk.core.ValueInput.createByReal(1),
+            defultRectSize,
         )
+        row_height.isVisible = False
         column_width = inputs.addDistanceValueCommandInput(
             "column_width_0",
             "Column 1 Width",
-            adsk.core.ValueInput.createByReal(1),
+            defultRectSize,
         )
+        column_width.isVisible = False
 
-        rowsTable.addCommandInput(row_number, 0, 0,)
-        columnsTable.addCommandInput(column_number, 0, 0)
-        rowsTable.addCommandInput(row_height, 0, 1)
-        columnsTable.addCommandInput(column_width, 0, 1)
+        rowsTable.addCommandInput(row_number, 1, 0,)
+        columnsTable.addCommandInput(column_number, 1, 0)
+        rowsTable.addCommandInput(row_height, 1, 1)
+        columnsTable.addCommandInput(column_width, 1, 1)
 
         # Initially hide the custom size tables until the user checks the customSizes box
         rowsTable.isVisible = False
         columnsTable.isVisible = False
 
-        rowsTable.isVisible = True
-        columnsTable.isVisible = True
-        rowsTable.isVisible = False
-        columnsTable.isVisible = False
-
-        #
+        #optional costume rectangles
         customGrid = inputs.addBoolValueInput(
             "customGrid", "customGrid", True, "", False
         )
 
-        table = inputs.addTableCommandInput("rectanglesTable", "Table", 5, "1:1")
+        rectanglesTable = inputs.addTableCommandInput("rectanglesTable", "Table", 5, "1:1")
+        rectanglesTable.isVisible = False
 
-        table.isVisible = False
-
-        table.tablePresentationStyle = (
+        rectanglesTable.tablePresentationStyle = (
             adsk.core.TablePresentationStyles.itemBorderTablePresentationStyle
         )
 
         add_button_rectangles = inputs.addBoolValueInput(
             "rectanglesTable_AddButton", "➕", False
         )
-        table.addToolbarCommandInput(add_button_rectangles)
+        rectanglesTable.addToolbarCommandInput(add_button_rectangles)
+        add_button_rectangles.isVisible = False
 
         for i in range(4):
             cord_input = inputs.addIntegerSpinnerCommandInput(
-                f"cord_{i}_0", f"Cord {i},0", 0, maxCount, 1, 0
+                f"cord_{i}_0", f"Cord {i},0", 1, maxCount, 1, 1
             )
-            table.addCommandInput(cord_input, 0, i)
+            rectanglesTable.addCommandInput(cord_input, 0, i)
 
         # for each one should it be filled or a pocket
         # Create a drop-down input and add it to the first row and second column.
@@ -171,7 +183,17 @@ class MakeGridCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         )
         pocketOrFill.listItems.add("pocket", True, "Resources/Icons/pocket")
         pocketOrFill.listItems.add("filled", False, "Resources/Icons/filled")
-        table.addCommandInput(pocketOrFill, 0, 5)
+        rectanglesTable.addCommandInput(pocketOrFill, 0, 5)
+
+        rectanglesTable_instructions = inputs.addTextBoxCommandInput(
+            "Rect_instruct",
+            "Rectangle Table Instructions",
+            '<div align="center">Enter coordinate pairs as: <code><b>(Start Row, Start Col), (End Row, End Col)</b><br>wich define the rectangle</div>',
+            2,
+            True
+        )
+        rectanglesTable_instructions.isFullWidth = True
+        rectanglesTable_instructions.isVisible = False
 
 
         inputs.addDistanceValueCommandInput(
@@ -268,10 +290,10 @@ class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
         if customGrid:
             rectanglesTable = inputs.itemById("rectanglesTable")
             for i in range(rectanglesTable.rowCount):
-                x1 = rectanglesTable.getInputAtPosition(i, 0).value
-                y1 = rectanglesTable.getInputAtPosition(i, 1).value
-                x2 = rectanglesTable.getInputAtPosition(i, 2).value
-                y2 = rectanglesTable.getInputAtPosition(i, 3).value
+                x1 = rectanglesTable.getInputAtPosition(i, 0).value - 1
+                y1 = rectanglesTable.getInputAtPosition(i, 1).value - 1
+                x2 = rectanglesTable.getInputAtPosition(i, 2).value - 1
+                y2 = rectanglesTable.getInputAtPosition(i, 3).value - 1
                 pocketOrFill = rectanglesTable.getInputAtPosition(i, 5)
 
                 if pocketOrFill.selectedItem.name == "pocket":
@@ -322,8 +344,8 @@ class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
                     x2 = x1 + columnWidthList[i]
                     y2 = y1 + rowHeightList[j]
 
-                    p1 = adsk.core.Point2D.create(x1, y1)
-                    p2 = adsk.core.Point2D.create(x2, y2)
+                    p1 = adsk.core.Point3D.create(x1, y1, 0)
+                    p2 = adsk.core.Point3D.create(x2, y2, 0)
                     grid_lines.addTwoPointRectangle(p1, p2)
                 elif coustome_pockets.get((i,j)):
                     # draw the rectangle
@@ -332,19 +354,20 @@ class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
                     i2, j2 = coustome_pockets[(i,j)]
                     x2 = overallWidth_until[i2] + columnWidthList[i2]
                     y2 = overallHeight_until[j2] + rowHeightList[j2]
-                    p1 = adsk.core.Point2D.create(x1, y1)
-                    p2 = adsk.core.Point2D.create(x2, y2)
+                    p1 = adsk.core.Point3D.create(x1, y1, 0)
+                    p2 = adsk.core.Point3D.create(x2, y2, 0)
                     grid_lines.addTwoPointRectangle(p1, p2)
 
                 # else it's 2 so a filled rectangle so we draw nothing
         
         # so we know that in 0<x,y<outerOffset there is no rectangle so we can chose there an get the outer rectangle / divider
-        chosing_point = adsk.core.Point2D.create(outerOffset/2, outerOffset/2)
-        diveder_profile = grid_sketch.profileAtPoint(chosing_point)
-        
+        chosing_point = adsk.core.Point3D.create(outerOffset/2, outerOffset/2, 0)
+        #get the outer profile that contains the point
+        diveder_profile = next((p for p in grid_sketch.profiles if p.boundingBox.contains(chosing_point)), None)
+
         #extrude the grid divider
         ext_input = extrudes.createInput(diveder_profile, adsk.fusion.FeatureOperations.JoinFeatureOperation)
-        ext_input.setDistanceExtent(False, deviderHeight)
+        ext_input.setDistanceExtent(False, adsk.core.ValueInput.createByReal(deviderHeight))
         extrudes.add(ext_input)
 
         #add fillets to all the vertical edges
@@ -381,6 +404,8 @@ class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
             inner_fillet_input.addConstantRadiusEdgeSet(inner_edge_collection, inner_radius, True)
             fillets.add(inner_fillet_input)
         
+        adsk.terminate()
+        
 
     
 
@@ -406,7 +431,7 @@ class MakeGridCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
                 row_height = inputs.addDistanceValueCommandInput(
                     f"row_height_{newRowIndex}",
                     f"Row {newRowIndex} Height",
-                    adsk.core.ValueInput.createByReal(10),
+                    defultRectSize,
                 )
                 table.addCommandInput(
                     row_number,
@@ -421,7 +446,7 @@ class MakeGridCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
                 column_width = inputs.addDistanceValueCommandInput(
                     f"column_width_{newRowIndex}",
                     f"Column {newRowIndex} Width",
-                    adsk.core.ValueInput.createByReal(10),
+                    defultRectSize,
                 )
                 table.addCommandInput(
                     column_number,
@@ -432,7 +457,7 @@ class MakeGridCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             elif parentId == "rectanglesTable":
                 for i in range(4):
                     cord_input = inputs.addIntegerSpinnerCommandInput(
-                        f"cord_{i}_{newRowIndex}", f"Cord {i}", 0, maxCount, 1, 0
+                        f"cord_{i}_{newRowIndex}", f"Cord {i}", 1, maxCount, 1, 1
                     )
                     table.addCommandInput(cord_input, newRowIndex, i)
 
@@ -454,7 +479,9 @@ class MakeGridCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
         elif changedInput.id == "customGrid":
             customGrid = inputs.itemById("customGrid").value
             table = inputs.itemById("rectanglesTable")
+            instrucitons = inputs.itemById("Rect_instruct")
             table.isVisible = customGrid
+            instrucitons.isVisible = customGrid
 
 
 def stop(context):
