@@ -59,12 +59,12 @@ class MakeGridCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         inputs.addDistanceValueCommandInput(
             "baseThickness",
             "Base Thickness",
-            adsk.core.ValueInput.createByReal(10),
+            adsk.core.ValueInput.createByReal(1),
         )
         inputs.addDistanceValueCommandInput(
             "deviderHeight",
             "Divider Height",
-            adsk.core.ValueInput.createByReal(5),
+            adsk.core.ValueInput.createByReal(0.5),
         )
         inputs.addIntegerSpinnerCommandInput("rowCount", "Row Count", 1, maxCount, 1, 3)
         inputs.addIntegerSpinnerCommandInput(
@@ -74,23 +74,23 @@ class MakeGridCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         inputs.addDistanceValueCommandInput(
             "rowheight",
             "Row Height",
-            adsk.core.ValueInput.createByReal(10),
+            adsk.core.ValueInput.createByReal(1),
         )
         inputs.addDistanceValueCommandInput(
             "columnWidth",
             "Column Width",
-            adsk.core.ValueInput.createByReal(10),
+            adsk.core.ValueInput.createByReal(1),
         )
 
         inputs.addDistanceValueCommandInput(
             "innerOffset",
             "Inner Spacing",
-            adsk.core.ValueInput.createByReal(5),
+            adsk.core.ValueInput.createByReal(0.25),
         )
         inputs.addDistanceValueCommandInput(
             "outerOffset",
             "Outer Spacing",
-            adsk.core.ValueInput.createByReal(10),
+            adsk.core.ValueInput.createByReal(1),
         )
 
         #
@@ -118,19 +118,15 @@ class MakeGridCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         row_height = inputs.addDistanceValueCommandInput(
             "row_height_0",
             "Row 1 Height",
-            adsk.core.ValueInput.createByReal(10),
+            adsk.core.ValueInput.createByReal(1),
         )
         column_width = inputs.addDistanceValueCommandInput(
             "column_width_0",
             "Column 1 Width",
-            adsk.core.ValueInput.createByReal(10),
+            adsk.core.ValueInput.createByReal(1),
         )
 
-        rowsTable.addCommandInput(
-            row_number,
-            0,
-            0,
-        )
+        rowsTable.addCommandInput(row_number, 0, 0,)
         columnsTable.addCommandInput(column_number, 0, 0)
         rowsTable.addCommandInput(row_height, 0, 1)
         columnsTable.addCommandInput(column_width, 0, 1)
@@ -181,12 +177,12 @@ class MakeGridCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         inputs.addDistanceValueCommandInput(
             "innerFilletRadius",
             "Inner Fillet Radius",
-            adsk.core.ValueInput.createByReal(10),
+            adsk.core.ValueInput.createByReal(0.25),
         )
         inputs.addDistanceValueCommandInput(
             "outerFilletRadius",
             "Outer Fillet Radius",
-            adsk.core.ValueInput.createByReal(10),
+            adsk.core.ValueInput.createByReal(1),
         )
         
 
@@ -207,12 +203,13 @@ class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
         super().__init__()
 
     def notify(self, args):
-        eventArgs = adsk.core.CommandCreatedEventArgs.cast(args)
+        eventArgs = adsk.core.CommandEventArgs.cast(args)
         inputs = eventArgs.command.commandInputs
+        
         columnCount = inputs.itemById("columnCount").value
         rowCount = inputs.itemById("rowCount").value
-        rowheight = inputs.itemById("rowheight").value
-        columnWidth = inputs.itemById("columnWidth").value
+        defaultRowHeight = inputs.itemById("rowheight").value
+        defaultColumnWidth = inputs.itemById("columnWidth").value
         innerOffset = inputs.itemById("innerOffset").value
         outerOffset = inputs.itemById("outerOffset").value
         customSizes = inputs.itemById("customSizes").value
@@ -223,27 +220,35 @@ class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
         outerFillet = inputs.itemById("outerFilletRadius").value
 
         overallWidth = outerOffset
-        coulmnWidth = [columnWidth for _ in range(columnCount)]
+        columnWidthList = [defaultColumnWidth for _ in range(columnCount)]
         overallWidth_until = []
         overallHeight = outerOffset
-        rowHeight = [rowheight for _ in range(rowCount)]
+        rowHeightList = [defaultRowHeight for _ in range(rowCount)]
         overallHeight_until = []
 
+        normalRows = rowCount
+        normalColumns = columnCount
+
+        #TODO: fix this
         if customSizes:
-            for i in range(columnCount):
+            rowHeightsTable = inputs.itemById("rowsTable")
+            for i in range(rowHeightsTable.rowCount):
                 overallWidth_until.append(overallWidth)
                 column_width = inputs.itemById(f"column_width_{i}")
                 if column_width:
-                    coulmnWidth[i] = column_width.value
-                overallWidth += coulmnWidth[i] + innerOffset
+                    columnWidthList[i] = column_width.value
+                overallWidth += columnWidthList[i] + innerOffset
 
             for i in range(rowCount):
                 overallHeight_until.append(overallHeight)
                 row_height = inputs.itemById(f"row_height_{i}")
                 if row_height:
-                    rowHeight[i] = row_height.value
-                overallHeight += rowHeight[i] + innerOffset
+                    rowHeightList[i] = row_height.value
+                overallHeight += rowHeightList[i] + innerOffset
         
+        overallHeight += normalRows * (defaultRowHeight+innerOffset)
+        overallWidth += normalColumns * (defaultColumnWidth+innerOffset)
+
         overallWidth += outerOffset - innerOffset #the right outer offset, and the there isn't inner offset after the last column
         overallHeight += outerOffset - innerOffset
 
@@ -287,13 +292,12 @@ class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
         prof = base_sketch.profiles.item(0)
         extrudes = root_Component.features.extrudeFeatures
         ext_input = extrudes.createInput(prof, adsk.fusion.FeatureOperations.NewBodyFeatureOperation)
-        ext_input.setDistanceExtent(False, baseThickness)
-        extrude = extrudes.add(ext_input)
-
+        ext_input.setDistanceExtent(False, adsk.core.ValueInput.createByReal(baseThickness))
+        
         base_plate_feature = extrudes.add(ext_input)
-        base_body = base_plate_feature.bodies.item(0)
 
-        base_face = extrude.endFaces.item(0) # the top face of the base rectangle, where the divider will be extruded from
+        base_body = base_plate_feature.bodies.item(0)
+        base_face = base_plate_feature.endFaces.item(0) # the top face of the base rectangle, where the divider will be extruded from
 
         grid_sketch = sketches.add(base_face)
         grid_lines = grid_sketch.sketchCurves.sketchLines
@@ -304,21 +308,21 @@ class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
                     # draw the rectangle
                     x1 = overallWidth_until[i]
                     y1 = overallHeight_until[j]
-                    x2 = x1 + coulmnWidth[i]
-                    y2 = y1 + rowHeight[j]
+                    x2 = x1 + columnWidthList[i]
+                    y2 = y1 + rowHeightList[j]
 
-                    p1 = adsk.core.Point3D.create(x1, y1, 0)
-                    p2 = adsk.core.Point3D.create(x2, y2, 0)
+                    p1 = adsk.core.Point2D.create(x1, y1)
+                    p2 = adsk.core.Point2D.create(x2, y2)
                     grid_lines.addTwoPointRectangle(p1, p2)
                 elif coustome_pockets.get((i,j)):
                     # draw the rectangle
                     x1 = overallWidth_until[i]
                     y1 = overallHeight_until[j]
                     i2, j2 = coustome_pockets[(i,j)]
-                    x2 = overallWidth_until[i2] + coulmnWidth[i2]
-                    y2 = overallHeight_until[j2] + rowHeight[j2]
-                    p1 = adsk.core.Point3D.create(x1, y1, 0)
-                    p2 = adsk.core.Point3D.create(x2, y2, 0)
+                    x2 = overallWidth_until[i2] + columnWidthList[i2]
+                    y2 = overallHeight_until[j2] + rowHeightList[j2]
+                    p1 = adsk.core.Point2D.create(x1, y1)
+                    p2 = adsk.core.Point2D.create(x2, y2)
                     grid_lines.addTwoPointRectangle(p1, p2)
 
                 # else it's 2 so a filled rectangle so we draw nothing
@@ -365,6 +369,7 @@ class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
             inner_radius = adsk.core.ValueInput.createByReal(innerFillet)
             inner_fillet_input.addConstantRadiusEdgeSet(inner_edge_collection, inner_radius, True)
             fillets.add(inner_fillet_input)
+        
 
     
 
