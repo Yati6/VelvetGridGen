@@ -3,7 +3,7 @@
 	"type":	"script",
 	"author":	"Itay",
 	"description":	{
-		"":	"make the space for the velvet automaticlly"
+		"":	"make a Valet tray from user input"
 	},
 	"version":	"",
 	"supportedOS":	"windows|mac",
