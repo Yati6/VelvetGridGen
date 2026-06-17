@@ -20,9 +20,9 @@ def run(_context: str):
 
     try:
 
-        # Get the CommandDefinitions collection.
+        # Get the CommandDefinitions collection to replace this command with the current one
         cmdDefs = ui.commandDefinitions
-        # SAFELY CLEAN UP EXPIRED BUTTON DEFINITIONS FROM PREVIOUS RUN CRASHES
+        
         existingDef = cmdDefs.itemById("CreateVelvetGrid")
         if existingDef:
             existingDef.deleteMe()
