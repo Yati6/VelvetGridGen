@@ -219,38 +219,49 @@ class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
         innerFillet = inputs.itemById("innerFilletRadius").value
         outerFillet = inputs.itemById("outerFilletRadius").value
 
-        overallWidth = outerOffset
         columnWidthList = [defaultColumnWidth for _ in range(columnCount)]
-        overallWidth_until = []
-        overallHeight = outerOffset
         rowHeightList = [defaultRowHeight for _ in range(rowCount)]
-        overallHeight_until = []
 
-        normalRows = rowCount
-        normalColumns = columnCount
-
-        #TODO: fix this
         if customSizes:
-            rowHeightsTable = inputs.itemById("rowsTable")
-            for i in range(rowHeightsTable.rowCount):
-                overallWidth_until.append(overallWidth)
-                column_width = inputs.itemById(f"column_width_{i}")
-                if column_width:
-                    columnWidthList[i] = column_width.value
-                overallWidth += columnWidthList[i] + innerOffset
+            rowsTable = inputs.itemById("rowsTable")
+            columnsTable = inputs.itemById("columnsTable")
 
-            for i in range(rowCount):
-                overallHeight_until.append(overallHeight)
-                row_height = inputs.itemById(f"row_height_{i}")
-                if row_height:
-                    rowHeightList[i] = row_height.value
-                overallHeight += rowHeightList[i] + innerOffset
+            # Update row values from the rows input table
+            for i in range(rowsTable.rowCount):
+                # Column 0 holds the index, Column 1 holds the distance 
+                row_idx_spinner = rowsTable.getInputAtPosition(i, 0)
+                row_val_input = rowsTable.getInputAtPosition(i, 1)
+                
+                if row_idx_spinner and row_val_input:
+                    target_row_idx = row_idx_spinner.value - 1 # coulmn 1 is index 0 and so on so -1
+                    if 0 <= target_row_idx < rowCount:
+                        rowHeightList[target_row_idx] = row_val_input.value
+
+            # Update column values from the columns input table
+            for i in range(columnsTable.rowCount):
+                col_idx_spinner = columnsTable.getInputAtPosition(i, 0)
+                col_val_input = columnsTable.getInputAtPosition(i, 1)
+                
+                if col_idx_spinner and col_val_input:
+                    target_col_idx = col_idx_spinner.value - 1
+                    if 0 <= target_col_idx < columnCount:
+                        columnWidthList[target_col_idx] = col_val_input.value
+
+        overallWidth_until = []
+        current_width_accum = outerOffset
+        for i in range(columnCount):
+            overallWidth_until.append(current_width_accum)
+            current_width_accum += columnWidthList[i] + innerOffset
         
-        overallHeight += normalRows * (defaultRowHeight+innerOffset)
-        overallWidth += normalColumns * (defaultColumnWidth+innerOffset)
+        overallWidth = current_width_accum - innerOffset + outerOffset #the last offset is outer not inner so we change it
 
-        overallWidth += outerOffset - innerOffset #the right outer offset, and the there isn't inner offset after the last column
-        overallHeight += outerOffset - innerOffset
+        overallHeight_until = []
+        current_height_accum = outerOffset
+        for j in range(rowCount):
+            overallHeight_until.append(current_height_accum)
+            current_height_accum += rowHeightList[j] + innerOffset
+            
+        overallHeight = current_height_accum - innerOffset + outerOffset
 
         rectanglesType = [[0 for _ in range(columnCount)] for _ in range(rowCount)] #0 normal rectangles, 1 coustome pockets, 2 coustome filled
         coustome_pockets = dict() # (x1,y1) to (x2,y2)
