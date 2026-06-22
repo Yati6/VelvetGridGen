@@ -5,7 +5,7 @@
 	"description":	{
 		"":	"make a Valet tray from user input"
 	},
-	"version":	"",
+	"version":	"1.0",
 	"supportedOS":	"windows|mac",
 	"editEnabled":	true,
 	"iconFilename":	"ScriptIcon.svg"
