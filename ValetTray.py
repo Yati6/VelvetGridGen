@@ -42,7 +42,7 @@ def run(_context: str):
         # Keep the script running.
         adsk.autoTerminate(False)
 
-    except:  # pylint:disable=bare-except
+    except:
         # Write the error message to the TEXT COMMANDS window.
         app.log(f"Failed:\n{traceback.format_exc()}")
 
