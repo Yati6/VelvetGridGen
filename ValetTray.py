@@ -218,6 +218,14 @@ class MakeGridCommandCreatedEventHandler(adsk.core.CommandCreatedEventHandler):
         cmd.inputChanged.add(onInputChanged)
         handlers.append(onInputChanged)
 
+        # Connect to the executePreview event.
+        #so to the new preview feature
+        onExecutePreview = MakeGridCommandExecutePreviewHandler(onExecute)
+        cmd.executePreview.add(onExecutePreview)
+        handlers.append(onExecutePreview)
+
+        cmd.destroy.add(lambda args: adsk.terminate())
+
 
 # Event handler for the execute event.
 class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
@@ -404,7 +412,8 @@ class MakeGridCommandExecuteHandler(adsk.core.CommandEventHandler):
             inner_fillet_input.addConstantRadiusEdgeSet(inner_edge_collection, inner_radius, True)
             fillets.add(inner_fillet_input)
         
-        adsk.terminate()
+        #Commented it out so the preview command doesn't terminate
+        #adsk.terminate()
         
 
     
@@ -483,6 +492,20 @@ class MakeGridCommandInputChangedHandler(adsk.core.InputChangedEventHandler):
             table.isVisible = customGrid
             instrucitons.isVisible = customGrid
 
+# The new event for the preview feature
+class MakeGridCommandExecutePreviewHandler(adsk.core.CommandEventHandler):
+    def __init__(self, execute_handler):
+        super().__init__()
+        self.execute_handler = execute_handler
+
+    def notify(self, args):
+        eventArgs = adsk.core.CommandEventArgs.cast(args)
+        
+        # Call your existing generation logic to draw the preview
+        self.execute_handler.notify(args)
+        
+        # Tell Fusion 360 to keep this preview as the final result when OK is pressed
+        eventArgs.isValidResult = True
 
 def stop(context):
     try:
